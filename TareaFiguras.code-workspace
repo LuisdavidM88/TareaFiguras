@@ -1,0 +1,16 @@
+{
+  "folders": [
+    { "path": "servicio-figuras" },
+    { "path": "figuras-app" }
+  ],
+  "settings": {
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "disabled"
+  },
+  "extensions": {
+    "recommendations": [
+      "vscjava.vscode-java-pack",
+      "vmware.vscode-boot-dev-pack"
+    ]
+  }
+}

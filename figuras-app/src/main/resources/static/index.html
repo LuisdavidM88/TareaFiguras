@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figuras · Reflection y Groovy</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 820px; margin: 24px auto; padding: 0 16px; background: #f6f7f9; color: #1d2330; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  p.sub { margin-top: 0; color: #5a6274; }
+  section { background: #fff; border: 1px solid #dde1e8; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  label { display: block; font-size: .85rem; color: #5a6274; margin: 8px 0 4px; }
+  input, textarea, select { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #c8cdd6; border-radius: 6px; font: inherit; }
+  textarea { font-family: Consolas, monospace; font-size: .85rem; min-height: 230px; }
+  button { margin-top: 10px; padding: 8px 14px; border: 0; border-radius: 6px; background: #a6192e; color: #fff; font: inherit; cursor: pointer; }
+  button.sec { background: #44506a; }
+  pre { background: #1d2330; color: #e6e9ef; padding: 12px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+  .fila { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fila button { margin-top: 0; }
+  small { color: #5a6274; }
+</style>
+</head>
+<body>
+  <h1>Figuras · Reflection y máquinas de interpretación</h1>
+  <p class="sub">Instancia figuras por nombre de clase y parámetros en tiempo de ejecución.</p>
+
+  <section>
+    <h2>1 · Crear figura</h2>
+    <label for="nombre">Nombre de la clase</label>
+    <input id="nombre" value="Circulo">
+    <label for="params">Parámetros (nombre=valor, separados por coma)</label>
+    <input id="params" value="radio=5">
+    <div class="fila" style="margin-top:10px">
+      <button onclick="crear()">Crear y calcular</button>
+      <button class="sec" onclick="ejemplo('Circulo','radio=5')">Círculo</button>
+      <button class="sec" onclick="ejemplo('Rectangulo','base=4, altura=6')">Rectángulo</button>
+      <button class="sec" onclick="ejemplo('Triangulo','base=8, altura=3')">Triángulo</button>
+      <button class="sec" onclick="ejemplo('Cuadrado','lado=2')">Cuadrado</button>
+      <button class="sec" onclick="ejemplo('Pentagono','lado=3')">Pentágono (Groovy)</button>
+      <button class="sec" onclick="ejemplo('Hexagono','lado=2')">Hexágono (servicio externo)</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · Cargar una clase Groovy en tiempo de ejecución</h2>
+    <small>La clase debe estar en <code>package figuras</code> e implementar <code>Figura</code>.</small>
+    <textarea id="codigo">package figuras
+
+// Pentágono regular definido en Groovy: se compila en tiempo de ejecución
+class Pentagono implements Figura {
+    private final double lado
+
+    Pentagono(double lado) {
+        this.lado = lado
+    }
+
+    @Override
+    double calcularArea() {
+        return (5 * lado * lado) / (4 * Math.tan(Math.PI / 5))
+    }
+
+    @Override
+    double calcularPerimetro() {
+        return 5 * lado
+    }
+}</textarea>
+    <div class="fila" style="margin-top:10px">
+      <button onclick="cargarGroovy()">Compilar y registrar</button>
+      <button class="sec" onclick="verCargadas()">Ver figuras cargadas</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Resultado</h2>
+    <pre id="salida">—</pre>
+  </section>
+
+<script>
+  const salida = document.getElementById('salida');
+
+  function mostrar(datos) {
+    salida.textContent = JSON.stringify(datos, null, 2);
+  }
+
+  async function llamar(url, opciones) {
+    try {
+      const r = await fetch(url, opciones);
+      const texto = await r.text();
+      let datos;
+      try { datos = JSON.parse(texto); } catch (e) { datos = { respuesta: texto }; }
+      mostrar(r.ok ? datos : { estado: r.status, ...datos });
+    } catch (e) {
+      mostrar({ error: 'No se pudo conectar con la aplicación: ' + e.message });
+    }
+  }
+
+  function ejemplo(nombre, params) {
+    document.getElementById('nombre').value = nombre;
+    document.getElementById('params').value = params;
+    crear();
+  }
+
+  function crear() {
+    const nombre = document.getElementById('nombre').value.trim();
+    const parametros = {};
+    document.getElementById('params').value.split(',').forEach(par => {
+      const [k, v] = par.split('=').map(s => (s || '').trim());
+      if (k) parametros[k] = v;
+    });
+    llamar('/api/figuras/crear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, parametros })
+    });
+  }
+
+  function cargarGroovy() {
+    llamar('/api/figuras/groovy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: document.getElementById('codigo').value
+    });
+  }
+
+  function verCargadas() {
+    llamar('/api/figuras/cargadas');
+  }
+</script>
+</body>
+</html>
